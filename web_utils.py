@@ -58,9 +58,23 @@ def get_UID(platform,name,authTicket):
     }
     url = "https://public-ubiservices.ubi.com/v3/profiles?nameOnPlatform="+name+"&platformType="+platform
     response = requests.get(url, headers=headers)
-    print(response.status_code)
+    print("UID response code: "+str(response.status_code))
     userData=json.loads(response.text)
     return userData['profiles'][0]['idOnPlatform']
+
+def get_name(platform,UID,authTicket):
+    headers = {
+        "Authorization": authTicket,
+        "Expiration": formatted_future_time,
+        "Ubi-Appid": appid,
+        "Ubi-Sessionid": "57130b9b-0cb7-49c7-8fda-ba0be96f4dd3",
+    }
+    url = "https://public-ubiservices.ubi.com/v3/profiles?idOnPlatform="+UID+"&platformType="+platform
+    response = requests.get(url, headers=headers)
+    print("UID response code: "+str(response.status_code))
+    userData=json.loads(response.text)
+    print(userData)
+    return userData['profiles'][0]['nameOnPlatform']
 
 def get_json(file_path,url,authTicket):
     headers = {
@@ -70,6 +84,6 @@ def get_json(file_path,url,authTicket):
         "Ubi-Sessionid": "57130b9b-0cb7-49c7-8fda-ba0be96f4dd3",
     }
     response = requests.get(url, headers=headers)
-    print(response.status_code)
+    print("Data response code: "+ str(response.status_code))
     with open(file_path, 'w') as f:
         f.write(response.text)

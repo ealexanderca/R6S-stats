@@ -3,6 +3,8 @@ import http.client
 import json
 from datetime import datetime, timedelta
 import requests
+import base64
+import getpass
 
 current_time = datetime.utcnow()
 future_time = current_time + timedelta(minutes=10)
@@ -15,11 +17,15 @@ spaceIds = {
 }
 appid = "39baebad-39e5-4552-8c25-2c9b919064e2"
 
+def filePath():
+    return os.path.dirname(os.path.abspath(__file__))+"\\"
+
+def check_token():
+    if not os.path.exists(filePath()+"token.txt"):
+        generate_token()
+
 def get_auth_ticket(platform):
-    if not os.path.exists("token.txt"):
-        with open("tokenGenerator.py") as f:
-            exec(f.read())
-    with open("token.txt", "r") as file:
+    with open(filePath()+"token.txt", "r") as file:
         token = file.read().strip()
     
 
@@ -87,3 +93,18 @@ def get_json(file_path,url,authTicket):
     print("Data response code: "+ str(response.status_code))
     with open(file_path, 'w') as f:
         f.write(response.text)
+        
+def token_encode(email, password):
+    token = 'basic ' + base64.b64encode((email + ":" + password).encode("utf-8")).decode("utf-8")
+    return token
+
+def save_token_to_file(token):
+    file = open(filePath()+"token.txt", "w") 
+    file.write(token)
+
+def generate_token():
+    email = input("Enter your email: ")
+    password = getpass.getpass("Enter your password: ")
+    token = token_encode(email, password)
+    save_token_to_file(token)
+    print("Generated Token saved to token.txt")

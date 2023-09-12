@@ -7,7 +7,7 @@ from web_utils import get_UID
 from web_utils import get_json
 
 #inputs
-names=['botdogs']
+names=['botdogs','betterbotdogs']
 platform='uplay'
 UID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
 plot_season = ['killDeathRatio','headshotAccuracy','roundsWithAKill','winLossRatio']

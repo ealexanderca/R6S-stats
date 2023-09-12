@@ -82,7 +82,7 @@ class UserInterface(tk.Tk):
 
         gameModes = ["all", "casual", "ranked", "unranked"]
         for mode in gameModes:
-            rb = tk.Radiobutton(self.options_frame, text=mode, variable=self.gameMode_var, value=mode, command=self.submit_stats)
+            rb = tk.Radiobutton(self.options_frame, text=mode, variable=self.gameMode_var, value=mode, command=self.draw_trends)
             rb.pack()
 
         self.teamRole_var = tk.StringVar(value="all")
@@ -91,7 +91,7 @@ class UserInterface(tk.Tk):
 
         teamRoles = ["all", "attacker", "defender"]
         for role in teamRoles:
-            rb = tk.Radiobutton(self.options_frame, text=role, variable=self.teamRole_var, value=role, command=self.submit_stats)
+            rb = tk.Radiobutton(self.options_frame, text=role, variable=self.teamRole_var, value=role, command=self.draw_trends)
             rb.pack()
 
         self.selectedStat_var = tk.StringVar(value="winLossRatio")
@@ -100,26 +100,26 @@ class UserInterface(tk.Tk):
 
         stats = ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"]
         for stat in stats:
-            rb = tk.Radiobutton(self.options_frame, text=stat, variable=self.selectedStat_var, value=stat, command=self.submit_stats)
+            rb = tk.Radiobutton(self.options_frame, text=stat, variable=self.selectedStat_var, value=stat, command=self.draw_trends)
             rb.pack()
-        self.get_data()
-        self.submit_stats()
+        self.get_trends()
+        self.draw_trends()
 
     def submit_username(self):
         self.name = self.username_entry.get()
         self.get_UID('uplay')
         self.UID_entry.delete(0,'end')
         self.UID_entry.insert(0,self.UID)
-        self.get_data()
-        self.submit_stats()
+        self.get_trends()
+        self.draw_trends()
 
     def submit_UID(self):
         self.UID = self.UID_entry.get()
         self.get_name('uplay')
         self.username_entry.delete(0,'end')
         self.username_entry.insert(0,self.name)
-        self.get_data()
-        self.submit_stats()
+        self.get_trends()
+        self.draw_trends()
     
     def submit_days(self):
         if self.days_entry.get()=='':
@@ -133,10 +133,10 @@ class UserInterface(tk.Tk):
                 self.days=1
         self.days_entry.delete(0,'end')
         self.days_entry.insert(0,self.days)
-        self.get_data()
-        self.submit_stats()
+        self.get_trends()
+        self.draw_trends()
     
-    def get_data(self):
+    def get_trends(self):
         endDate = datetime.now()
         startDate = endDate - timedelta(days=self.days)
         endDate = endDate.strftime("%Y%m%d")
@@ -148,7 +148,7 @@ class UserInterface(tk.Tk):
         with open(file_path, 'w') as f:
             f.write(response.text)
         
-    def submit_stats(self):
+    def draw_trends(self):
         fig, ax = plt.subplots(figsize=(6,6),nrows=1, ncols=1)
         ax.clear()
         file_path = filePath() + self.UID + 'trendtemp.json'
@@ -158,10 +158,10 @@ class UserInterface(tk.Tk):
         # Call a function to process the selected stat, game mode, and player role
         try:
             with open(file_path, 'r') as json_file:
-                json_data = json_file.read()
-            parsed_data = json.loads(json_data)  # Convert JSON string to Python data structure
-            data=parsed_data['profileData'][self.UID]['platforms']['PC']['gameModes'][gameMode]['teamRoles'][teamRole][0][selectedStat]['actuals']
-            trend=parsed_data['profileData'][self.UID]['platforms']['PC']['gameModes'][gameMode]['teamRoles'][teamRole][0][selectedStat]['trend']
+                json_trends = json_file.read()
+            parsed_trends = json.loads(json_trends)  # Convert JSON string to Python data structure
+            data=parsed_trends['profileData'][self.UID]['platforms']['PC']['gameModes'][gameMode]['teamRoles'][teamRole][0][selectedStat]['actuals']
+            trend=parsed_trends['profileData'][self.UID]['platforms']['PC']['gameModes'][gameMode]['teamRoles'][teamRole][0][selectedStat]['trend']
             datakeys = list(data.keys())
             datavalues = list(data.values())
             trendkeys = list(trend.keys())
@@ -221,16 +221,16 @@ class UserInterface(tk.Tk):
             'appId': self.appid,
             'spaceId': self.spaceIds['uplay'],
         }
-        json_data = json.dumps(data)
+        json_trends = json.dumps(data)
 
         try:
-            conn.request('POST', path, body=json_data, headers=headers)
+            conn.request('POST', path, body=json_trends, headers=headers)
             response = conn.getresponse()
             data = response.read()
             conn.close()
-            session_data = json.loads(data)
-            self.authTicket = 'Ubi_v1 t=' + session_data['ticket']
-            self.sessionID = session_data['sessionId']
+            session_trends = json.loads(data)
+            self.authTicket = 'Ubi_v1 t=' + session_trends['ticket']
+            self.sessionID = session_trends['sessionId']
         except Exception as e:
             print(str(e))
 

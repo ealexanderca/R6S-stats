@@ -11,7 +11,7 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 
 
-class UserInterface(tk.Tk):
+class TrendInterface(tk.Tk):
     def __init__(self):
         self.web=web_access()
         super().__init__()
@@ -124,5 +124,5 @@ class UserInterface(tk.Tk):
         self.quit()
 
 if __name__ == "__main__":
-    app = UserInterface()
+    app = TrendInterface()
     app.mainloop()

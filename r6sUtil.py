@@ -85,6 +85,7 @@ class web_access:
             "xbl": "98a601e5-ca91-4440-b1c5-753f601a2c90",
             "null": "null"
         }
+    
     def get_auth_ticket(self):
         headers = {
             'Content-Type': 'application/json',

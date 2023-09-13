@@ -2,14 +2,11 @@ import json
 from termcolor import colored
 import json
 import re
-from web_utils import get_auth_ticket
-from web_utils import get_UID
-from web_utils import get_json
+from r6sUtil import *
 
 #inputs
-names=['botdogs','betterbotdogs']
+names=['betterbotdogs','botdogs']
 platform='uplay'
-UID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
 plot_season = ['killDeathRatio','headshotAccuracy','roundsWithAKill','winLossRatio']
 skip_print=['type','statsType','seasonYear','seasonNumber','roundsWithAnAce','roundsWithClutch','seasonNum','statsDetail']
 calc=[['roundsWithAnAce','aces'],['roundsWithClutch','clutches']]
@@ -17,25 +14,25 @@ sumVals=["matchesPlayed","roundsPlayed","minutesPlayed","matchesWon","matchesLos
 platform2='PC'
 gameMode='all'
 teamRole='all'
-authTicket = get_auth_ticket(platform)
 spaceIds = {
-    "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
-    "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
-    "xbl": "98a601e5-ca91-4440-b1c5-753f601a2c90",
-    "null": "null"
-}
+            "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
+            "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
+            "xbl": "98a601e5-ca91-4440-b1c5-753f601a2c90",
+            "null": "null"
+        }
 sumAll={}
+web=web_access()
 for item in sumVals:
     sumAll[item]=0
 for name in names:
     #UID collection
     if name !='':
-        UID=get_UID(platform,name,authTicket)
+        UID=web.get_UID(platform,name)
     # Step 1: Read the JSON file
     file_path = UID+'seasonal.json'  # Replace with your file's path
-    get_json(file_path,"https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked",authTicket)
-    with open(file_path, 'r') as json_file:
-        json_data = json_file.read()
+    url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
+    response = web.send_request(url)
+    json_data =response.text
     parsed_data = json.loads(json_data)  # Convert JSON string to Python data structure
     seasons=parsed_data['profileData'][UID]['platforms'][platform2]['gameModes'][gameMode]['teamRoles'][teamRole]
     for season in seasons:

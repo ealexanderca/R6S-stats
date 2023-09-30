@@ -6,12 +6,14 @@ import requests
 import http.client
 import base64
 import getpass
+import re
 
 def filePath():
     return os.path.dirname(os.path.abspath(__file__))+"\\"
 class web_token():
     def __init__(self):
         self.check()
+
     def encode(self,email, password):
         self.token = 'basic ' + base64.b64encode((email + ":" + password).encode("utf-8")).decode("utf-8")
 
@@ -75,7 +77,7 @@ class web_access:
 
     def __init__(self):
         self.webToken=web_token()
-        self.appid = "39baebad-39e5-4552-8c25-2c9b919064e2"
+        self.appid = ''
         # settings
         self.authTicket=''
         self.sessionID=''
@@ -87,6 +89,7 @@ class web_access:
         }
     
     def get_auth_ticket(self):
+        self.get_appID()
         headers = {
             'Content-Type': 'application/json',
             'Authorization': self.webToken.token,
@@ -99,10 +102,10 @@ class web_access:
             'appId': self.appid,
             'spaceId': self.spaceIds['uplay'],
         }
-        json_trends = json.dumps(data)
+        body = json.dumps(data)
 
         try:
-            conn.request('POST', path, body=json_trends, headers=headers)
+            conn.request('POST', path, body=body, headers=headers)
             response = conn.getresponse()
             data = response.read()
             conn.close()
@@ -111,6 +114,12 @@ class web_access:
             self.sessionID = session_trends['sessionId']
         except Exception as e:
             print(str(e))
+
+    def get_appID(self):
+        url="https://www.ubisoft.com/en-ca/game/rainbow-six/siege/stats/summary/833708a6-9155-435c-bfdc-6d9a96d6fcd0"
+        response = self.send_request(url)
+        match = re.search('"appId":"([^"]+)"', response.text)
+        self.appid=match.group(1)
 
     def get_UID(self,platform,username):
         url = "https://public-ubiservices.ubi.com/v3/profiles?nameOnPlatform="+username+"&platformType="+platform
@@ -141,6 +150,8 @@ class web_access:
             "Expiration": (datetime.utcnow() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "Ubi-Appid": self.appid,
             "Ubi-Sessionid": self.sessionID,
+            'User-Agent': 'UbiServices_SDK_2020.Release.58_PC64_ansi_static',
+            'Connection': 'keep-alive'
             }
             response = requests.get(url, headers=headers)
         return response

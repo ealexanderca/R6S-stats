@@ -7,19 +7,12 @@ from r6sUtil import *
 #inputs
 names=['betterbotdogs','botdogs']
 platform='uplay'
-plot_season = ['killDeathRatio','headshotAccuracy','roundsWithAKill','winLossRatio']
 skip_print=['type','statsType','seasonYear','seasonNumber','roundsWithAnAce','roundsWithClutch','seasonNum','statsDetail']
 calc=[['roundsWithAnAce','aces'],['roundsWithClutch','clutches']]
 sumVals=["matchesPlayed","roundsPlayed","minutesPlayed","matchesWon","matchesLost","roundsWon","roundsLost","kills","assists","death","headshots","meleeKills","teamKills","openingKills","openingDeaths","trades","openingKillTrades","openingDeathTrades","revives","distanceTravelled","aces","clutches"]
 platform2='PC'
 gameMode='all'
 teamRole='all'
-spaceIds = {
-            "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
-            "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
-            "xbl": "98a601e5-ca91-4440-b1c5-753f601a2c90",
-            "null": "null"
-        }
 sumAll={}
 web=web_access()
 for item in sumVals:
@@ -29,8 +22,7 @@ for name in names:
     if name !='':
         UID=web.get_UID(platform,name)
     # Step 1: Read the JSON file
-    file_path = UID+'seasonal.json'  # Replace with your file's path
-    url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
+    url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+web.spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
     response = web.send_request(url)
     json_data =response.text
     parsed_data = json.loads(json_data)  # Convert JSON string to Python data structure

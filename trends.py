@@ -63,10 +63,8 @@ class TrendInterface(tk.Tk):
         startDate = endDate - timedelta(days=self.days.val())
         endDate = endDate.strftime("%Y%m%d")
         startDate = startDate.strftime("%Y%m%d")
-        url="https://prod.datadev.ubisoft.com/v1/users/"+self.UID.get()+"/playerstats?spaceId=5172a557-50b5-4665-b7db-e3f2e8c5041d&view=current&aggregation=movingpoint&gameMode=all,ranked,casual,unranked&platformGroup=PC&teamRole=all,attacker,defender&startDate="+startDate+"&endDate="+endDate+"&trendType=days"
-        response = self.web.send_request(url)
-        print("Data response code: "+ str(response.status_code))
-        self.json=response.text
+        self.json=self.web.get_data('movingpoint',self.UID.get(),'uplay',startDate,endDate)
+        
         
     def draw(self):
         try:
@@ -75,9 +73,9 @@ class TrendInterface(tk.Tk):
             selectedStat = self.stat.var.get()
             selectedGameMode = self.gameMode.var.get()
             selectedTeamRole = self.teamRole.var.get()
-            parsed_trends = json.loads(self.json)
-            data=parsed_trends['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
-            trend=parsed_trends['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
+            
+            data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
+            trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
             datakeys = list(data.keys())
             datavalues = list(data.values())
             trendkeys = list(trend.keys())

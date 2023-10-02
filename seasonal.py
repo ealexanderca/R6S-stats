@@ -22,11 +22,8 @@ for name in names:
     if name !='':
         UID=web.get_UID(platform,name)
     # Step 1: Read the JSON file
-    url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+web.spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
-    response = web.send_request(url)
-    json_data =response.text
-    parsed_data = json.loads(json_data)  # Convert JSON string to Python data structure
-    seasons=parsed_data['profileData'][UID]['platforms'][platform2]['gameModes'][gameMode]['teamRoles'][teamRole]
+    json_data=web.get_data('seasonal',UID,'uplay')
+    seasons=json_data['profileData'][UID]['platforms'][platform2]['gameModes'][gameMode]['teamRoles'][teamRole]
     for season in seasons:
         season['seasonNum'] = int(re.findall(r'\d+',season['seasonYear'])[0])*4+int(re.findall(r'\d+',season['seasonNumber'])[0])-5
         for calcIn,calcOut in calc:

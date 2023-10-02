@@ -125,8 +125,10 @@ class web_access:
         url = "https://public-ubiservices.ubi.com/v3/profiles?nameOnPlatform="+username+"&platformType="+platform
         response = self.send_request(url)
         print("UID response code: "+str(response.status_code))
-        userData=json.loads(response.text)
-        return userData['profiles'][0]['idOnPlatform']
+        userData=json.loads(response.text)['profiles']
+        for data in userData:
+            if data['platformType'] == platform:
+                return data['userId']
 
     def get_name(self,platform,UID):
         url = "https://public-ubiservices.ubi.com/v3/profiles?idOnPlatform="+UID+"&platformType="+platform
@@ -135,6 +137,18 @@ class web_access:
         userData=json.loads(response.text)
         return userData['profiles'][0]['nameOnPlatform']
 
+    def get_data(self,aggregation,UID,platform,startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d")):
+        match aggregation:
+            case 'seasonal':
+                url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
+            case 'movingpoint':
+                url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view=current&aggregation=movingpoint&gameMode=all,ranked,casual,unranked&platformGroup=PC&teamRole=all,attacker,defender&startDate="+startDate+"&endDate="+endDate+"&trendType=days"
+            case _:
+                print('not a valid dataset')
+        response = self.send_request(url)
+        print("Data response code: "+ str(response.status_code))
+        return json.loads(response.text)
+    
     def send_request(self,url):
         headers = {
             "Authorization": self.authTicket,

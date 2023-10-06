@@ -3,13 +3,12 @@ from r6sUtil import *
 import os
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-import json
 from termcolor import colored
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline
-
+import pandas as pd
 
 class TrendInterface(tk.Tk):
     def __init__(self):
@@ -38,8 +37,9 @@ class TrendInterface(tk.Tk):
         self.submit_button.pack()
     
         self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:")
-        self.teamRole = exclusive_input(self, ["all", "attacker", "defender"],"Team Role:")
+        self.teamRole = multiple_input(self, ["all", "attacker", "defender"],"Team Role:",colors=['black','red','blue'])
         self.stat = exclusive_input(self, ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"],"Statistic:")
+        self.trendLines = multiple_input(self, ["Spline","Linear","custom"],"Trend Line:",initial=[True,False,False])
         self.get()
         self.draw()
 
@@ -71,35 +71,49 @@ class TrendInterface(tk.Tk):
             ax.clear()
             selectedStat = self.stat.var.get()
             selectedGameMode = self.gameMode.var.get()
-            selectedTeamRole = self.teamRole.var.get()
-            
-            data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
-            trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
-            datakeys = list(data.keys())
-            datavalues = list(data.values())
-            trendkeys = list(trend.keys())
-            trendvalues = list(trend.values())
-            x_new = np.linspace(min(map(int,trendkeys)), max(map(int,trendkeys)), 800)
-            try:
-                spline = make_interp_spline(trendkeys, trendvalues, k=3)
-                values_smooth = spline(x_new)
-            except:
-                values_smooth=trendvalues
-                x_new = trendkeys
-            
-            ax.scatter(datakeys, datavalues)
-            ax.plot(x_new, values_smooth, marker='', linestyle='-', color='b')
+            selectedTeamRole=[]
+            colors=self.teamRole.colors
+            for index,val in enumerate(self.teamRole.vars):
+                if val.get():
+                    selectedTeamRole.append(self.teamRole.options[index])
+            for index,var in enumerate(selectedTeamRole):
+                data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][var][0][selectedStat]['actuals']
+                trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][var][0][selectedStat]['trend']
+                # converting data to number lists
+                datakeys = [eval(i) for i in list(data.keys())]
+                datavalues = list(data.values())
+                trendkeys = [eval(i) for i in list(trend.keys())]
+                trendvalues = list(trend.values())
+                #plotting the data
+                ax.scatter(datakeys, datavalues, color=colors[index])
+                # plotting the trend lines
+                if self.trendLines.vars[0].get():
+                    #r6s trend line
+                    x_new = np.linspace(min(map(int,trendkeys)), max(map(int,trendkeys)), 800)
+                    try:
+                        spline = make_interp_spline(trendkeys, trendvalues, k=3)
+                        values_smooth = spline(x_new)
+                    except:
+                        values_smooth=trendvalues
+                        x_new = trendkeys
+                    ax.plot(x_new, values_smooth, marker='', linestyle='-', color=colors[index])
+                if self.trendLines.vars[1].get():
+                    #linear trend line
+                    coefficients = np.polyfit(datakeys, datavalues, 1)
+                    m, b = coefficients
+                    ax.plot(datakeys, m * np.array(datakeys) + b, color=colors[index])
+                if self.trendLines.vars[2].get():
+                    #custom trend line
+                    window=min(20,len(datavalues))
+                    y_ma = pd.Series(datavalues).rolling(window=window,min_periods=1).mean()
+                    x_new2 = np.linspace(min(datakeys), max(datakeys), 800)  # Create 300 points for smoother curve
+                    spl = make_interp_spline(datakeys, y_ma, k=3)  # k=3 for cubic spline
+                    values_smooth2 = spl(x_new2)
+                    ax.plot(x_new2, values_smooth2, marker='', linestyle='-', color=colors[index])
             ax.set_xlabel('Game #')
             ax.set_ylabel('Value')
             ax.set_title(selectedStat+' Data Plot')
-            if max([np.max(values_smooth),max(map(int,datavalues))])!=0:
-                ax.set_ylim(0, max([np.max(values_smooth),max(map(int,datavalues))]))
-            else:
-                ax.set_ylim(0,1)
-            xticks = ax.get_xticks()
-            ax.set_xticks(xticks[::len(xticks) // 9])
-            ax.tick_params(axis='x', rotation=30)
-            ax.margins(x=0)  
+            ax.margins(x=0,y=0)
         except:
             print(colored('Could Not Load Data or No Data','red'))
             ax.set_title('Could Not Load Data or No Data', color='red')

@@ -9,30 +9,8 @@ import getpass
 import re
 
 def filePath():
-    return os.path.dirname(os.path.abspath(__file__))+"\\"
+    return os.path.dirname(os.path.abspath(__file__))+"\\"  
 
-class web_token():
-    def __init__(self):
-        self.check()
-
-    def encode(self,email, password):
-        self.token = 'basic ' + base64.b64encode((email + ":" + password).encode("utf-8")).decode("utf-8")
-
-    def generate(self):
-        email = input("Enter your email: ")
-        password = getpass.getpass("Enter your password: ")
-        self.encode(email, password)
-        file = open(filePath()+"token.txt", "w") 
-        file.write(self.token)
-        file.close()
-        print("Generated Token saved to token.txt")
-
-    def check(self):
-        if not os.path.exists(filePath()+"token.txt"):
-            self.generate()
-        else:
-            with open(filePath()+"token.txt", "r") as file:
-                self.token = file.read().strip()
 
 class exclusive_input():
     def __init__(self, root, options,title):
@@ -43,6 +21,27 @@ class exclusive_input():
         for option in options:
             rb = tk.Radiobutton(root.options_frame, text=option, variable=self.var, value=option, command=root.draw)
             rb.pack()
+
+
+class multiple_input():
+    def __init__(self, root, options, title,colors=None,initial=None):
+        if colors==None:
+            colors=[]
+            for i in range(len(options)):
+                colors.append('black')
+        if initial==None:
+            initial=[]
+            for i in range(len(options)):
+                initial.append(True)
+        self.colors=colors
+        self.options=options
+        self.vars = [tk.BooleanVar(value=val) for val in initial]
+        self.label = tk.Label(root.options_frame, text=title, fg="red")
+        self.label.pack()
+
+        for i, option in enumerate(options):
+            cb = tk.Checkbutton(root.options_frame, fg=colors[i], text=option, variable=self.vars[i], onvalue=True, offvalue=False, command=root.draw)
+            cb.pack()
     
 
 class text_input():
@@ -74,14 +73,16 @@ class text_input():
     def val(self):
         return int(self.entry.get())
 
-class web_access:
 
+class web_access:
     def __init__(self):
-        self.webToken=web_token()
+        self.config=filePath()+"webConfig.json"
         self.appid = ''
         # settings
         self.authTicket=''
         self.sessionID=''
+        self.get_appID()
+        self.read_config()
         self.spaceIds = {
             "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
             "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
@@ -95,24 +96,43 @@ class web_access:
             "null": "null"
         }
     
+    def write_config(self):
+        data={
+            'token': self.token,
+            'authTicket': self.authTicket,
+            'sessionID': self.sessionID
+        }
+        with open(self.config, 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+
+    def read_config(self):
+        if not os.path.exists(self.config):
+            self.generate_token()
+            self.get_auth_ticket()
+            self.write_config()
+        else:
+            with open(self.config, "r") as file:
+                data = json.load(file)
+                self.token=data['token']
+                self.authTicket=data['authTicket']
+                self.sessionID=data['sessionID']
+
+    def generate_token(self):
+        email = input("Enter your email: ")
+        password = getpass.getpass("Enter your password: ")
+        self.token = 'basic ' + base64.b64encode((email + ":" + password).encode("utf-8")).decode("utf-8")
+        print("Generated Token")
+
     def get_auth_ticket(self):
-        self.get_appID()
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': self.webToken.token,
+            'Authorization': self.token,
             'Ubi-AppId': self.appid,
         }
-
         conn = http.client.HTTPSConnection('public-ubiservices.ubi.com', port=443)
         path = '/v3/profiles/sessions'
-        data = {
-            'appId': self.appid,
-            'spaceId': self.spaceIds['uplay'],
-        }
-        body = json.dumps(data)
-
         try:
-            conn.request('POST', path, body=body, headers=headers)
+            conn.request('POST', path, headers=headers)
             response = conn.getresponse()
             data = response.read()
             if response.getcode() != 200:
@@ -122,10 +142,10 @@ class web_access:
                 self.authTicket = 'Ubi_v1 t=' + auth['ticket']
                 self.sessionID = auth['sessionId']
             conn.close()
+            self.write_config()
         except Exception as e:
             print(str(e))
         
-
     def get_appID(self):
         url="https://www.ubisoft.com/en-ca/game/rainbow-six/siege/stats/summary/833708a6-9155-435c-bfdc-6d9a96d6fcd0"
         response = self.send_request(url)
@@ -148,27 +168,33 @@ class web_access:
         userData=json.loads(response.text)
         return userData['profiles'][0]['nameOnPlatform']
 
-    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode='',region='',gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=''):
+    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode=None,region=None,gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=None):
         # possible aggregations 
         if seasonCode is list:
             seasonCode = ','.join(seasonCode)
+        if gameMode is list:
+            gameMode = ','.join(gameMode)
+        if teamRole is list:
+            teamRole = ','.join(teamRole)
+        if region is list:
+            region = ','.join(region)
         #selects the correct url to collect the data
-        if url == '':
+        if url == None:
             if view == 'sandbox':
                 seasonIds=','.join(map(str, list(range(0,-31,-1))))
                 url="https://public-ubiservices.ubi.com/v1/spaces/"+self.spaceIds[platform]+"/sandboxes/OSBOR_PC_LNCH_A/r6karma/player_skill_records?board_ids=pvp_ranked&season_ids="+seasonIds+"&region_ids="+region+"&profile_ids="+UID
             else:
                 url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view="+view+"&aggregation="+aggregation+"&gameMode="+gameMode+"&teamRole="+teamRole
                 if aggregation == 'movingpoint':
-                    url=url+"&trendType=days"
+                    url+="&trendType=days"
                 if platform != '':
-                    url=url+"&platformGroup="+self.platformGroup[platform]+"&platform="+self.platformGroup[platform]
+                    url+="&platformGroup="+self.platformGroup[platform]+"&platform="+self.platformGroup[platform]
                 if view=="current":
-                    url=url+"&startDate="+startDate+"&endDate="+endDate
-                if seasonCode != '':
-                    url=url+"&seasons="+seasonCode
-                if region != '':
-                    url=url+"&region_ids="+region
+                    url+="&startDate="+startDate+"&endDate="+endDate
+                if seasonCode != None:
+                    url+="&seasons="+seasonCode
+                if region != None:
+                    url+="&region_ids="+region
         response = self.send_request(url)
         print("Data response code: "+ str(response.status_code))
         if response.text:

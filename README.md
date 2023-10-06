@@ -1,10 +1,8 @@
-# R6S-stats-calculator
-a stats calculator that is easily modifiable and can have functions added on
+# R6S-stats
+This is a low level stats api that allows you to pull the raw json files from the official r6s website to use the raw data.
 
-Other Urls
-url = "https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=current&aggregation=summary&gameMode=all,ranked,unranked,casual&platformGroup="+platform2+"&teamRole=all,attacker,defender&seasons="+seasonCode
-url ="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=current&aggregation=movingpoint&gameMode=all,ranked,casual,unranked&platformGroup="+platform2+"&teamRole=all,attacker,defender&startDate="+startDate+"&endDate="+endDate+"&trendType=days"
-url="https://public-ubiservices.ubi.com/v1/spaces/"+spaceIds[platform]+"/sandboxes/OSBOR_PC_LNCH_A/r6karma/player_skill_records?board_ids=pvp_ranked&season_ids=-1,-2,-3,-4,-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15,-16,-17,-18,-19,-20,-21,-22,-23,-24,-25,-26,-27,-28,-29,-30,-31&region_ids=ncsa&profile_ids="+UID
-url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=current&aggregation=weapons&gameMode=all,ranked,casual,unranked&platformGroup="+platform2+"&teamRole=attacker,defender,all"
-url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=current&aggregation=operators&gameMode=all,ranked,casual,unranked&platformGroup="+platform2+"&teamRole=attacker,defender&seasons="+seasonCode
-url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+spaceIds[platform]+"&view=current&aggregation=maps&gameMode=all,ranked,casual,unranked&platformGroup="+platform2+"&teamRole=all,attacker,defender&seasons="+seasonCode
+# trends.py
+this is an example on how to use the API to plot the recent trend data fora all the data it collects
+
+# seasonal.py
+this program displays stats by season and converts certain stats to totals instead of per round. if you enter to names as a list it will give you a sum of both so you can see stats between all of your accounts.

@@ -63,8 +63,7 @@ class TrendInterface(tk.Tk):
         startDate = endDate - timedelta(days=self.days.val())
         endDate = endDate.strftime("%Y%m%d")
         startDate = startDate.strftime("%Y%m%d")
-        self.json=self.web.get_data('movingpoint',self.UID.get(),'uplay',startDate,endDate)
-        
+        self.json=self.web.get_data('movingpoint','current',self.UID.get(),startDate=startDate,endDate=endDate)
         
     def draw(self):
         try:

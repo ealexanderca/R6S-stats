@@ -10,6 +10,7 @@ import re
 
 def filePath():
     return os.path.dirname(os.path.abspath(__file__))+"\\"
+
 class web_token():
     def __init__(self):
         self.check()
@@ -87,6 +88,12 @@ class web_access:
             "xbl": "98a601e5-ca91-4440-b1c5-753f601a2c90",
             "null": "null"
         }
+        self.platformGroup ={
+            "uplay": "PC",
+            "psn": "console",
+            "xbl": "console",
+            "null": "null"
+        }
     
     def get_auth_ticket(self):
         self.get_appID()
@@ -108,12 +115,16 @@ class web_access:
             conn.request('POST', path, body=body, headers=headers)
             response = conn.getresponse()
             data = response.read()
+            if response.getcode() != 200:
+                print('could not get auth code, try deleting token.txt to regenerate it')
+            else:
+                auth = json.loads(data)
+                self.authTicket = 'Ubi_v1 t=' + auth['ticket']
+                self.sessionID = auth['sessionId']
             conn.close()
-            session_trends = json.loads(data)
-            self.authTicket = 'Ubi_v1 t=' + session_trends['ticket']
-            self.sessionID = session_trends['sessionId']
         except Exception as e:
             print(str(e))
+        
 
     def get_appID(self):
         url="https://www.ubisoft.com/en-ca/game/rainbow-six/siege/stats/summary/833708a6-9155-435c-bfdc-6d9a96d6fcd0"
@@ -137,17 +148,31 @@ class web_access:
         userData=json.loads(response.text)
         return userData['profiles'][0]['nameOnPlatform']
 
-    def get_data(self,aggregation,UID,platform,startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d")):
-        match aggregation:
-            case 'seasonal':
-                url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view=seasonal&aggregation=summary&gameMode=all,ranked,casual,unranked"
-            case 'movingpoint':
-                url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view=current&aggregation=movingpoint&gameMode=all,ranked,casual,unranked&platformGroup=PC&teamRole=all,attacker,defender&startDate="+startDate+"&endDate="+endDate+"&trendType=days"
-            case _:
-                print('not a valid dataset')
+    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode='',region='',gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=''):
+        # possible aggregations 
+        if seasonCode is list:
+            seasonCode = ','.join(seasonCode)
+        #selects the correct url to collect the data
+        if url == '':
+            if view == 'sandbox':
+                seasonIds=','.join(map(str, list(range(0,-31,-1))))
+                url="https://public-ubiservices.ubi.com/v1/spaces/"+self.spaceIds[platform]+"/sandboxes/OSBOR_PC_LNCH_A/r6karma/player_skill_records?board_ids=pvp_ranked&season_ids="+seasonIds+"&region_ids="+region+"&profile_ids="+UID
+            else:
+                url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view="+view+"&aggregation="+aggregation+"&gameMode="+gameMode+"&teamRole="+teamRole
+                if aggregation == 'movingpoint':
+                    url=url+"&trendType=days"
+                if platform != '':
+                    url=url+"&platformGroup="+self.platformGroup[platform]+"&platform="+self.platformGroup[platform]
+                if view=="current":
+                    url=url+"&startDate="+startDate+"&endDate="+endDate
+                if seasonCode != '':
+                    url=url+"&seasons="+seasonCode
+                if region != '':
+                    url=url+"&region_ids="+region
         response = self.send_request(url)
         print("Data response code: "+ str(response.status_code))
-        return json.loads(response.text)
+        if response.text:
+            return json.loads(response.text)
     
     def send_request(self,url):
         headers = {

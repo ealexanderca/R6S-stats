@@ -7,24 +7,27 @@ import http.client
 import base64
 import getpass
 import re
+from tkinter import ttk
 
 def filePath():
     return os.path.dirname(os.path.abspath(__file__))+"\\"  
 
 
 class exclusive_input():
-    def __init__(self, root, options,title):
+    def __init__(self, root, options,title,columns=1):
         self.var = tk.StringVar(value=options[0])
-        self.label = tk.Label(root.options_frame, text=title, fg="red")  # Set text color to red
-        self.label.pack()
+        self.frame= ttk.LabelFrame(root.options_frame, text=title)
 
-        for option in options:
-            rb = tk.Radiobutton(root.options_frame, text=option, variable=self.var, value=option, command=root.draw)
-            rb.pack()
+        for i, option in enumerate(options):
+            row_index = i // columns + 1  # Start from row 1 and increment every `columns` options
+            col_index = i % columns
+            rb = tk.Radiobutton(self.frame, text=option, variable=self.var, value=option, command=root.draw)
+            rb.grid(row=row_index, column=col_index)
+        self.frame.pack()
 
 
 class multiple_input():
-    def __init__(self, root, options, title,colors=None,initial=None):
+    def __init__(self, root, options, title,colors=None,initial=None,columns=1):
         if colors==None:
             colors=[]
             for i in range(len(options)):
@@ -35,12 +38,14 @@ class multiple_input():
                 initial.append(True)
         self.colors=colors
         self.options=options
+        self.frame= ttk.LabelFrame(root.options_frame, text=title)
         self.vars = [tk.BooleanVar(value=val) for val in initial]
-        self.label = tk.Label(root.options_frame, text=title, fg="red")
-        self.label.pack()
         for i, option in enumerate(options):
-            cb = tk.Checkbutton(root.options_frame, fg=colors[i], text=option, variable=self.vars[i], onvalue=True, offvalue=False, command=root.draw)
-            cb.pack()
+            row_index = i // columns + 1  # Start from row 1 and increment every `columns` options
+            col_index = i % columns
+            cb = tk.Checkbutton(self.frame, fg=colors[i], text=option, variable=self.vars[i], onvalue=True, offvalue=False, command=root.draw)
+            cb.grid(row=row_index, column=col_index)
+        self.frame.pack()
     
 
 class text_input():

@@ -36,7 +36,7 @@ class Interface(tk.Tk):
         self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
         self.submit_button.pack()
     
-        self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:")
+        self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
         self.teamRole = multiple_input(self, ["all", "attacker", "defender"],"Team Role:",colors=['black','red','blue'])
         self.stat = exclusive_input(self, ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"],"Statistic:")
         self.trendLines = multiple_input(self, ["points","Spline","Linear","moving average spline"],"Data Plot:",initial=[True,True,False,False])

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline
 import pandas as pd
+from matplotlib.lines import Line2D
 
 class Interface(tk.Tk):
     def __init__(self):
@@ -37,8 +38,8 @@ class Interface(tk.Tk):
         self.submit_button.pack()
         stats=['matchesPlayed', 'roundsPlayed', 'minutesPlayed', 'matchesWon', 'matchesLost', 'roundsWon', 'roundsLost', 'kills', 'assists', 'death', 'headshots', 'meleeKills', 'teamKills', 'openingKills', 'openingDeaths', 'trades', 'openingKillTrades', 'openingDeathTrades', 'revives', 'distanceTravelled', 'winLossRatio', 'killDeathRatio', 'headshotAccuracy', 'killsPerRound', 'roundsWithAKill', 'roundsWithMultiKill', 'roundsWithOpeningKill', 'roundsWithOpeningDeath', 'roundsWithKOST', 'roundsSurvived', 'roundsWithAnAce', 'roundsWithClutch', 'timeAlivePerMatch', 'timeDeadPerMatch', 'distancePerRound', 'aces', 'clutches', 'openingKillDeathRatio', 'RoundWinLossRatio']
         self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:")
-        self.stat = multiple_input(self, stats,"Statistic:",initial=[False for _ in range(len(stats))])
-        self.trendLines = multiple_input(self, ["points","Spline","Linear","moving average spline"],"Data Plot:",initial=[True,True,False,False])
+        self.stat = multiple_input(self, stats,"Statistic:",initial=[False for _ in range(len(stats))],columns=2)
+        self.trendLines = multiple_input(self, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False])
         self.get()
         self.draw()
 
@@ -47,13 +48,6 @@ class Interface(tk.Tk):
             self.UID.update(self.web.get_UID('uplay',self.username.get()))
         elif self.UID.changed():
             self.username.update(self.web.get_name('uplay',self.UID.get()))
-        if self.days.changed():
-            if self.days.get()=='':
-                self.days.update("120")
-            if self.days.val()>120:
-                self.days.update("120")
-            elif self.days.val()<1:
-                self.days.update('1')
         self.get()
         self.draw()
 
@@ -71,9 +65,9 @@ class Interface(tk.Tk):
         for i,val in enumerate(self.stat.vars):
             if val.get():
                 selectedStats.append(self.stat.options[i])
+        custom_lines =[]
         for selectedStat in selectedStats:
             cindex+=1
-            tree=datamap(self.json)
             datakeys=[]
             datavalues=[]
             for index in list(range(len(self.json[selectedGameMode]['seasons']))):
@@ -81,8 +75,7 @@ class Interface(tk.Tk):
                 datakeys.append(current['seasonYear']+current['seasonNumber'])
                 datavalues.append(current[selectedStat])
             # converting data to number lists
-                
-            
+            dataints=list(range(len(datakeys)))
             #plotting the data
             if self.trendLines.vars[0].get():
                 ax.scatter(datakeys, datavalues, color=colors[cindex])
@@ -92,21 +85,25 @@ class Interface(tk.Tk):
                 ax.plot(datakeys, datavalues, marker='', linestyle='-', color=colors[cindex])
             if self.trendLines.vars[2].get():
                 #linear trend line
-                coefficients = np.polyfit(datakeys, datavalues, 1)
+                coefficients = np.polyfit(dataints, datavalues, 1)
                 m, b = coefficients
-                ax.plot(datakeys, m * np.array(datakeys) + b, color=colors[cindex])
+                ax.plot(datakeys, m * np.array(dataints) + b, color=colors[cindex])
             if self.trendLines.vars[3].get():
                 #custom trend line
                 window=min(5,len(datavalues))
                 y_ma = pd.Series(datavalues).rolling(window=window,min_periods=1,center=True).mean()
-                x_new2 = np.linspace(min(datakeys), max(datakeys), 800)  # Create 300 points for smoother curve
-                spl = make_interp_spline(datakeys, y_ma, k=3)  # k=3 for cubic spline
+                x_new2 = np.linspace(min(dataints), max(dataints), 800)  # Create 300 points for smoother curve
+                spl = make_interp_spline(dataints, y_ma, k=3)  # k=3 for cubic spline
                 values_smooth2 = spl(x_new2)
                 ax.plot(x_new2, values_smooth2, marker='', linestyle='-', color=colors[cindex])
+            custom_lines.append(Line2D([0], [0], color=colors[cindex], lw=4))
+        
+        ax.legend(custom_lines, selectedStats)
         ax.set_xlabel('Game #')
         ax.set_ylabel('Value')
         ax.set_title('Seasonal Data Plot')
         ax.margins(x=0,y=0)
+        ax.set_ylim(bottom=0)
         # except:
         #     print(colored('Could Not Load Data or No Data','red'))
         #     ax.set_title('Could Not Load Data or No Data', color='red')

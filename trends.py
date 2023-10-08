@@ -10,7 +10,7 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 import pandas as pd
 
-class TrendInterface(tk.Tk):
+class Interface(tk.Tk):
     def __init__(self):
         self.web=web_access()
         super().__init__()
@@ -39,7 +39,7 @@ class TrendInterface(tk.Tk):
         self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:")
         self.teamRole = multiple_input(self, ["all", "attacker", "defender"],"Team Role:",colors=['black','red','blue'])
         self.stat = exclusive_input(self, ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"],"Statistic:")
-        self.trendLines = multiple_input(self, ["Spline","Linear","custom"],"Trend Line:",initial=[True,False,False])
+        self.trendLines = multiple_input(self, ["points","Spline","Linear","moving average spline"],"Data Plot:",initial=[True,True,False,False])
         self.get()
         self.draw()
 
@@ -71,23 +71,25 @@ class TrendInterface(tk.Tk):
             ax.clear()
             selectedStat = self.stat.var.get()
             selectedGameMode = self.gameMode.var.get()
-            selectedTeamRole=[]
+            selectedTeamRoles=[]
             colors=self.teamRole.colors
             for index,val in enumerate(self.teamRole.vars):
                 if val.get():
-                    selectedTeamRole.append(self.teamRole.options[index])
-            for index,var in enumerate(selectedTeamRole):
-                data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][var][0][selectedStat]['actuals']
-                trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][var][0][selectedStat]['trend']
+                    selectedTeamRoles.append(self.teamRole.options[index])
+            for selectedTeamRole in selectedTeamRoles:
+                index=self.teamRole.options.index(selectedTeamRole)
+                data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
+                trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
                 # converting data to number lists
                 datakeys = [eval(i) for i in list(data.keys())]
                 datavalues = list(data.values())
                 trendkeys = [eval(i) for i in list(trend.keys())]
                 trendvalues = list(trend.values())
                 #plotting the data
-                ax.scatter(datakeys, datavalues, color=colors[index])
-                # plotting the trend lines
                 if self.trendLines.vars[0].get():
+                    ax.scatter(datakeys, datavalues, color=colors[index])
+                # plotting the trend lines
+                if self.trendLines.vars[1].get():
                     #r6s trend line
                     x_new = np.linspace(min(map(int,trendkeys)), max(map(int,trendkeys)), 800)
                     try:
@@ -97,15 +99,15 @@ class TrendInterface(tk.Tk):
                         values_smooth=trendvalues
                         x_new = trendkeys
                     ax.plot(x_new, values_smooth, marker='', linestyle='-', color=colors[index])
-                if self.trendLines.vars[1].get():
+                if self.trendLines.vars[2].get():
                     #linear trend line
                     coefficients = np.polyfit(datakeys, datavalues, 1)
                     m, b = coefficients
                     ax.plot(datakeys, m * np.array(datakeys) + b, color=colors[index])
-                if self.trendLines.vars[2].get():
+                if self.trendLines.vars[3].get():
                     #custom trend line
-                    window=min(20,len(datavalues))
-                    y_ma = pd.Series(datavalues).rolling(window=window,min_periods=1).mean()
+                    window=min(5,len(datavalues))
+                    y_ma = pd.Series(datavalues).rolling(window=window,min_periods=1,center=True).mean()
                     x_new2 = np.linspace(min(datakeys), max(datakeys), 800)  # Create 300 points for smoother curve
                     spl = make_interp_spline(datakeys, y_ma, k=3)  # k=3 for cubic spline
                     values_smooth2 = spl(x_new2)
@@ -124,9 +126,7 @@ class TrendInterface(tk.Tk):
 
         self.canvas = FigureCanvasTkAgg(fig, master=self)
         self.canvas.draw()
-
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
         self.toolbar = NavigationToolbar2Tk(self.canvas, self)
         self.toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
@@ -135,5 +135,5 @@ class TrendInterface(tk.Tk):
         self.quit()
 
 if __name__ == "__main__":
-    app = TrendInterface()
+    app = Interface()
     app.mainloop()

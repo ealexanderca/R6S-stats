@@ -38,7 +38,6 @@ class multiple_input():
         self.vars = [tk.BooleanVar(value=val) for val in initial]
         self.label = tk.Label(root.options_frame, text=title, fg="red")
         self.label.pack()
-
         for i, option in enumerate(options):
             cb = tk.Checkbutton(root.options_frame, fg=colors[i], text=option, variable=self.vars[i], onvalue=True, offvalue=False, command=root.draw)
             cb.pack()
@@ -168,7 +167,7 @@ class web_access:
         userData=json.loads(response.text)
         return userData['profiles'][0]['nameOnPlatform']
 
-    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode=None,region=None,gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=None):
+    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode=None,region=None,gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=None,debug=False):
         # possible aggregations 
         if seasonCode is list:
             seasonCode = ','.join(seasonCode)
@@ -196,6 +195,9 @@ class web_access:
                 if region != None:
                     url+="&region_ids="+region
         response = self.send_request(url)
+        if debug==True:
+            print(url)
+            print(response.text)
         print("Data response code: "+ str(response.status_code))
         if response.text:
             return json.loads(response.text)
@@ -206,7 +208,9 @@ class web_access:
             "Expiration": (datetime.utcnow() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "Ubi-Appid": self.appid,
             "Ubi-Sessionid": self.sessionID,
-        }
+            'User-Agent': 'UbiServices_SDK_2020.Release.58_PC64_ansi_static',
+            'Connection': 'keep-alive'
+            }
         response = requests.get(url, headers=headers)
         if response.status_code !=200:
             self.get_auth_ticket()
@@ -220,3 +224,70 @@ class web_access:
             }
             response = requests.get(url, headers=headers)
         return response
+def datamap(data):
+    tree=[]
+    tree.append(list(data))
+    index=1
+    while True:
+        data=data[tree[index-1][0]]
+        if type(data) is list:
+            print(len(data))
+            tree.append([len(data)-1])
+        elif type(data) is dict:
+            tree.append(list(data))
+        else:
+            break
+        index+=1
+    return tree
+
+def removechoice(data):
+    if type(data) is list:
+        tree=list(range(len(data)))
+    elif type(data) is dict:
+        tree=list(data)
+    else:
+        return data
+    
+    if len(tree)<=1:
+        return removechoice(data[tree[0]])
+    elif type(data) is list:
+        temp=[]
+        for i in tree:
+            temp.append(removechoice(data[i]))
+    else:
+        if 'value' in tree:
+            return data['value']
+        else:
+            temp={}
+            for key in tree:
+                temp[key]=removechoice(data[key])
+    return temp
+
+def div(i,j):
+    if j==0:
+        return 0
+    else:
+        return i/j
+    
+def seasonalSummary(data):
+    data=removechoice(data)
+    calc=[["round(season['roundsWithAnAce']*season['roundsPlayed'])",'aces'],["round(season['roundsWithClutch']*season['roundsPlayed'])",'clutches'],["div(season['openingKills'],season['openingDeaths'])",'openingKillDeathRatio'],["div(season['roundsWon'],season['roundsLost'])",'RoundWinLossRatio']]
+    sumVals=["matchesPlayed","roundsPlayed","minutesPlayed","matchesWon","matchesLost","roundsWon","roundsLost","kills","assists","death","headshots","meleeKills","teamKills","openingKills","openingDeaths","trades","openingKillTrades","openingDeathTrades","revives","distanceTravelled","aces","clutches"]
+    for key,seasons in data.items():
+        sumAll={}
+        for item in sumVals:
+            sumAll[item]=0
+        for season in seasons:
+            season['seasonNum'] = int(re.findall(r'\d+',season['seasonYear'])[0])*4+int(re.findall(r'\d+',season['seasonNumber'])[0])-5
+            for calcIn,calcOut in calc:
+                season[calcOut]=eval(calcIn)
+            for item in sumVals:
+                sumAll[item]+=season[item]
+        seasons = sorted(seasons, key=lambda x: x['seasonNum'], reverse=False)
+        sumAll["openingKillDeathRatio"]=sumAll["openingKills"]/sumAll["openingDeaths"]
+        sumAll["killDeathRatio"]=sumAll["kills"]/sumAll["death"]
+        sumAll["winLossRatio"]=sumAll["matchesWon"]/sumAll["matchesLost"]
+        sumAll["RoundWinLossRatio"]=sumAll["roundsWon"]/sumAll["roundsLost"]
+        seasons.append([sumAll])
+        data[key]=seasons
+    return data

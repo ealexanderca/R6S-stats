@@ -288,6 +288,6 @@ def seasonalSummary(data):
         sumAll["killDeathRatio"]=sumAll["kills"]/sumAll["death"]
         sumAll["winLossRatio"]=sumAll["matchesWon"]/sumAll["matchesLost"]
         sumAll["RoundWinLossRatio"]=sumAll["roundsWon"]/sumAll["roundsLost"]
-        seasons.append([sumAll])
-        data[key]=seasons
+        sumAll["headshotAccuracy"]=sumAll["headshots"]/sumAll["kills"]
+        data[key]={'seasons': seasons,"Summary": sumAll}
     return data

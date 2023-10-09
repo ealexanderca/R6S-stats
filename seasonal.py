@@ -3,8 +3,6 @@ from r6sUtil import *
 import os
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from termcolor import colored
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline

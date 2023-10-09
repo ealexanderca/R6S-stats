@@ -1,7 +1,7 @@
 from termcolor import colored
 from r6sUtil import *
 platform='uplay'
-names=['botdogs','betterbotdogs']
+names=['make_uh_wish']
 web=web_access()
 skip_print=['type','statsType','seasonYear','seasonNumber','roundsWithAnAce','roundsWithClutch','seasonNum','statsDetail']
 sumVals=["matchesPlayed","roundsPlayed","minutesPlayed","matchesWon","matchesLost","roundsWon","roundsLost","kills","assists","death","headshots","meleeKills","teamKills","openingKills","openingDeaths","trades","openingKillTrades","openingDeathTrades","revives","distanceTravelled","aces","clutches"]

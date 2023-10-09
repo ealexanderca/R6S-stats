@@ -37,9 +37,9 @@ class Interface(tk.Tk):
         self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
         self.submit_button.pack()
         stats=['matchesPlayed', 'roundsPlayed', 'minutesPlayed', 'matchesWon', 'matchesLost', 'roundsWon', 'roundsLost', 'kills', 'assists', 'death', 'headshots', 'meleeKills', 'teamKills', 'openingKills', 'openingDeaths', 'trades', 'openingKillTrades', 'openingDeathTrades', 'revives', 'distanceTravelled', 'winLossRatio', 'killDeathRatio', 'headshotAccuracy', 'killsPerRound', 'roundsWithAKill', 'roundsWithMultiKill', 'roundsWithOpeningKill', 'roundsWithOpeningDeath', 'roundsWithKOST', 'roundsSurvived', 'roundsWithAnAce', 'roundsWithClutch', 'timeAlivePerMatch', 'timeDeadPerMatch', 'distancePerRound', 'aces', 'clutches', 'openingKillDeathRatio', 'RoundWinLossRatio']
-        self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:")
+        self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
         self.stat = multiple_input(self, stats,"Statistic:",initial=[False for _ in range(len(stats))],columns=2)
-        self.trendLines = multiple_input(self, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False])
+        self.trendLines = multiple_input(self, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False],columns=2)
         self.get()
         self.draw()
 
@@ -72,11 +72,18 @@ class Interface(tk.Tk):
             datavalues=[]
             for index in list(range(len(self.json[selectedGameMode]['seasons']))):
                 current=self.json[selectedGameMode]['seasons'][index]
-                datakeys.append(current['seasonYear']+current['seasonNumber'])
-                datavalues.append(current[selectedStat])
+                if current['seasonNum']<13 and selectedStat in ['openingKills','openingDeaths','openingKillTrades','openingDeathTrades','roundsWithOpeningKill','roundsWithOpeningDeath','openingKillDeathRatio']:
+                    datakeys.append(current['seasonYear']+current['seasonNumber'])
+                    datavalues.append(np.NaN)
+                else:
+                    datakeys.append(current['seasonYear']+current['seasonNumber'])
+                    datavalues.append(current[selectedStat])
             # converting data to number lists
             dataints=list(range(len(datakeys)))
             #plotting the data
+            idx = np.isfinite(datavalues)
+            y=np.array(datavalues)[idx]
+            x=np.array(dataints)[idx]
             if self.trendLines.vars[0].get():
                 ax.scatter(datakeys, datavalues, color=colors[cindex])
             # plotting the trend lines
@@ -85,15 +92,15 @@ class Interface(tk.Tk):
                 ax.plot(datakeys, datavalues, marker='', linestyle='-', color=colors[cindex])
             if self.trendLines.vars[2].get():
                 #linear trend line
-                coefficients = np.polyfit(dataints, datavalues, 1)
+                coefficients = np.polyfit(x, y, 1)
                 m, b = coefficients
-                ax.plot(datakeys, m * np.array(dataints) + b, color=colors[cindex])
+                ax.plot(x, m * np.array(x) + b, color=colors[cindex])
             if self.trendLines.vars[3].get():
                 #custom trend line
-                window=min(5,len(datavalues))
-                y_ma = pd.Series(datavalues).rolling(window=window,min_periods=1,center=True).mean()
-                x_new2 = np.linspace(min(dataints), max(dataints), 800)  # Create 300 points for smoother curve
-                spl = make_interp_spline(dataints, y_ma, k=3)  # k=3 for cubic spline
+                window=min(5,len(y))
+                y_ma = pd.Series(y).rolling(window=window,min_periods=1,center=True).mean()
+                x_new2 = np.linspace(min(x), max(x), 800)  # Create 300 points for smoother curve
+                spl = make_interp_spline(x, y_ma, k=3)  # k=3 for cubic spline
                 values_smooth2 = spl(x_new2)
                 ax.plot(x_new2, values_smooth2, marker='', linestyle='-', color=colors[cindex])
             custom_lines.append(Line2D([0], [0], color=colors[cindex], lw=4))

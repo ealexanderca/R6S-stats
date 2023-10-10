@@ -65,15 +65,15 @@ class text_input():
             self.entry.delete(0,'end')
             self.entry.insert(0,'^Error^')
         self.old=self.get()
-        
+
     def changed(self):
         temp= self.old!=self.get()
         self.old=self.get()
         return temp
-    
+
     def get(self):
         return self.entry.get()
-    
+
     def val(self):
         return int(self.entry.get())
 
@@ -84,9 +84,17 @@ class web_access:
         self.appid = ''
         # settings
         self.authTicket=''
-        self.sessionID=''
+        self.sessionId=''
         self.get_appID()
-        self.read_config()
+        try:
+            self.token=self.read_config('token')
+        except:
+            self.generate_token()
+        try:
+            [self.sessionId,self.authTicket]=self.read_config(['sessionId','authTicket'])
+        except:
+            self.get_authTicket()
+
         self.spaceIds = {
             "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
             "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
@@ -100,34 +108,41 @@ class web_access:
             "null": "null"
         }
     
-    def write_config(self):
-        data={
-            'token': self.token,
-            'authTicket': self.authTicket,
-            'sessionID': self.sessionID
-        }
-        with open(self.config, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
+    def write_config(self,input):
+        try:
+            file = open(self.config, 'r')
+            data=json.load(file)
+        except:
+            file = open(self.config, 'w')
+            json.dump(input, file, indent=4)
+            print('test')
+            return False
+        file.close
+        file = open(self.config, 'w')
+        data.update(input)
+        json.dump(data, file, indent=4)
+        return True
 
-    def read_config(self):
-        if not os.path.exists(self.config):
-            self.generate_token()
-            self.get_auth_ticket()
-            self.write_config()
+    def read_config(self,val):
+        file= open(self.config, "r")
+        data = json.load(file)
+        file.close()
+        if type(val) is list:
+            out={}
+            for item in val:
+                out[item]=data[item]
         else:
-            with open(self.config, "r") as file:
-                data = json.load(file)
-                self.token=data['token']
-                self.authTicket=data['authTicket']
-                self.sessionID=data['sessionID']
+            out=data[val]
+        return out
 
     def generate_token(self):
         email = input("Enter your email: ")
         password = getpass.getpass("Enter your password: ")
         self.token = 'basic ' + base64.b64encode((email + ":" + password).encode("utf-8")).decode("utf-8")
         print("Generated Token")
+        self.write_config({'token': self.token})
 
-    def get_auth_ticket(self):
+    def get_authTicket(self):
         headers = {
             'Content-Type': 'application/json',
             'Authorization': self.token,
@@ -144,12 +159,12 @@ class web_access:
             else:
                 auth = json.loads(data)
                 self.authTicket = 'Ubi_v1 t=' + auth['ticket']
-                self.sessionID = auth['sessionId']
+                self.sessionId = auth['sessionId']
             conn.close()
-            self.write_config()
         except Exception as e:
             print(str(e))
-        
+        self.write_config({'sessionId': self.sessionId,'authTicket': self.authTicket})
+
     def get_appID(self):
         url="https://www.ubisoft.com/en-ca/game/rainbow-six/siege/stats/summary/833708a6-9155-435c-bfdc-6d9a96d6fcd0"
         response = self.send_request(url)
@@ -206,29 +221,31 @@ class web_access:
         print("Data response code: "+ str(response.status_code))
         if response.text:
             return json.loads(response.text)
-    
+
     def send_request(self,url):
         headers = {
             "Authorization": self.authTicket,
             "Expiration": (datetime.utcnow() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "Ubi-Appid": self.appid,
-            "Ubi-Sessionid": self.sessionID,
+            "Ubi-Sessionid": self.sessionId,
             'User-Agent': 'UbiServices_SDK_2020.Release.58_PC64_ansi_static',
             'Connection': 'keep-alive'
             }
         response = requests.get(url, headers=headers)
         if response.status_code !=200:
-            self.get_auth_ticket()
+            self.get_authTicket()
             headers = {
             "Authorization": self.authTicket,
             "Expiration": (datetime.utcnow() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "Ubi-Appid": self.appid,
-            "Ubi-Sessionid": self.sessionID,
+            "Ubi-Sessionid": self.sessionId,
             'User-Agent': 'UbiServices_SDK_2020.Release.58_PC64_ansi_static',
             'Connection': 'keep-alive'
             }
             response = requests.get(url, headers=headers)
         return response
+
+
 def datamap(data):
     tree=[]
     tree.append(list(data))
@@ -244,6 +261,7 @@ def datamap(data):
             break
         index+=1
     return tree
+
 
 def removechoice(data):
     if type(data) is list:
@@ -268,12 +286,14 @@ def removechoice(data):
                 temp[key]=removechoice(data[key])
     return temp
 
+
 def div(i,j):
     if j==0:
         return 0
     else:
         return i/j
-    
+
+
 def seasonalSummary(data):
     data=removechoice(data)
     calc=[["round(season['roundsWithAnAce']*season['roundsPlayed'])",'aces'],["round(season['roundsWithClutch']*season['roundsPlayed'])",'clutches'],["div(season['openingKills'],season['openingDeaths'])",'openingKillDeathRatio'],["div(season['roundsWon'],season['roundsLost'])",'RoundWinLossRatio']]

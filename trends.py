@@ -1,14 +1,13 @@
 import tkinter as tk
 from r6sUtil import *
-import os
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from termcolor import colored
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import make_interp_spline
 import pandas as pd
+from datetime import datetime, timedelta
 
 class Interface(tk.Tk):
     def __init__(self):
@@ -16,26 +15,19 @@ class Interface(tk.Tk):
         super().__init__()
         self.defaultUID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
         self.defaultname='botdogs'
-        self.filePath= os.path.abspath(__file__)
-        if os.path.exists(filePath()+"defaultUID.txt"):
-            with open(filePath()+"defaultUID.txt", "r") as file:
-                self.defaultUID = file.read().strip()
-        else:
-            file = open(filePath()+"defaultUID.txt", "w") 
-            file.write(self.UID.get())
-            file.close()
-        
+        try:
+            self.defaultUID=self.web.read_config('defaultUID')
+        except:
+            self.web.write_config({'defaultUID':self.defaultUID})
         self.title("User Statistics Interface")
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.options_frame = ttk.LabelFrame(self, text="Options")
         self.options_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=0)
-        
         self.username = text_input(self,self.defaultname,'Username:')
         self.UID = text_input(self,self.defaultUID,'UID:')
         self.days = text_input(self,'120','Days:')
         self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
         self.submit_button.pack()
-    
         self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
         self.teamRole = multiple_input(self, ["all", "attacker", "defender"],"Team Role:",colors=['black','red','blue'])
         self.stat = exclusive_input(self, ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"],"Statistic:")
@@ -123,7 +115,6 @@ class Interface(tk.Tk):
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
             plt.close()
-
         self.canvas = FigureCanvasTkAgg(fig, master=self)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)

@@ -24,14 +24,14 @@ class Interface(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.options_frame = ttk.LabelFrame(self, text="Options")
         self.options_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=0)
-        self.username = text_input(self,self.defaultname,'Username:')
-        self.UID = text_input(self,self.defaultUID,'UID:')
+        self.username = text_input(self.options_frame,self.defaultname,'Username:')
+        self.UID = text_input(self.options_frame,self.defaultUID,'UID:')
         self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
         self.submit_button.pack()
         stats=['matchesPlayed', 'roundsPlayed', 'minutesPlayed', 'matchesWon', 'matchesLost', 'roundsWon', 'roundsLost', 'kills', 'assists', 'death', 'headshots', 'meleeKills', 'teamKills', 'openingKills', 'openingDeaths', 'trades', 'openingKillTrades', 'openingDeathTrades', 'revives', 'distanceTravelled', 'winLossRatio', 'killDeathRatio', 'headshotAccuracy', 'killsPerRound', 'roundsWithAKill', 'roundsWithMultiKill', 'roundsWithOpeningKill', 'roundsWithOpeningDeath', 'roundsWithKOST', 'roundsSurvived', 'roundsWithAnAce', 'roundsWithClutch', 'timeAlivePerMatch', 'timeDeadPerMatch', 'distancePerRound', 'aces', 'clutches', 'openingKillDeathRatio', 'RoundWinLossRatio']
-        self.gameMode = exclusive_input(self, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
-        self.stat = multiple_input(self, stats,"Statistic:",initial=[False for _ in range(len(stats))],columns=2)
-        self.trendLines = multiple_input(self, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False],columns=2)
+        self.gameMode = exclusive_input(self,self.options_frame, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
+        self.stat = multiple_input(self,self.options_frame, stats,"Statistic:",initial=[False for _ in range(len(stats))],columns=2)
+        self.trendLines = multiple_input(self,self.options_frame, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False],columns=2)
         self.get()
         self.draw()
 
@@ -51,7 +51,7 @@ class Interface(tk.Tk):
             cindex=-1
             fig, ax = plt.subplots(figsize=(6,6),nrows=1, ncols=1)
             ax.clear()
-            colors=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan']
+            colors=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown','tab:pink','tab:gray','tab:olive','tab:cyan','black']
             selectedGameMode = self.gameMode.var.get()
             selectedStats=[]
             for i,val in enumerate(self.stat.vars):
@@ -64,7 +64,7 @@ class Interface(tk.Tk):
                 datavalues=[]
                 for index in list(range(len(self.json[selectedGameMode]['seasons']))):
                     current=self.json[selectedGameMode]['seasons'][index]
-                    if current['seasonNum']<13 and selectedStat in ['openingKills','openingDeaths','openingKillTrades','openingDeathTrades','roundsWithOpeningKill','roundsWithOpeningDeath','openingKillDeathRatio']:
+                    if current['season_id']<14 and selectedStat in ['openingKills','openingDeaths','openingKillTrades','openingDeathTrades','roundsWithOpeningKill','roundsWithOpeningDeath','openingKillDeathRatio']:
                         datakeys.append(current['seasonYear']+current['seasonNumber'])
                         datavalues.append(np.NaN)
                     else:
@@ -100,7 +100,7 @@ class Interface(tk.Tk):
             ax.legend(custom_lines, selectedStats)
             ax.set_xlabel('Game #')
             ax.set_ylabel('Value')
-            ax.set_title('Seasonal Data Plot')
+            ax.set_title(self.username.get()+" Seasonal Data Plot")
             ax.margins(x=0,y=0)
             ax.set_ylim(bottom=0)
         except:

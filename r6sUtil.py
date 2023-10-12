@@ -14,20 +14,23 @@ def filePath():
 
 
 class exclusive_input():
-    def __init__(self, root, options,title,columns=1):
+    def __init__(self, root,frame, options,title,columns=1,column=None,row=None):
         self.var = tk.StringVar(value=options[0])
-        self.frame= ttk.LabelFrame(root.options_frame, text=title)
+        self.frame= ttk.LabelFrame(frame, text=title)
 
         for i, option in enumerate(options):
-            row_index = i // columns + 1  # Start from row 1 and increment every `columns` options
+            row_index = i // columns + 1 
             col_index = i % columns
             rb = tk.Radiobutton(self.frame, text=option, variable=self.var, value=option, command=root.draw)
             rb.grid(row=row_index, column=col_index)
-        self.frame.pack()
+        if row is None or column is None:
+            self.frame.pack()
+        else:
+            self.frame.grid(row=row, column=column)
 
 
 class multiple_input():
-    def __init__(self, root, options, title,colors=None,initial=None,columns=1):
+    def __init__(self, root,frame, options, title,colors=None,initial=None,columns=1,column=None,row=None):
         if colors==None:
             colors=[]
             for i in range(len(options)):
@@ -38,24 +41,30 @@ class multiple_input():
                 initial.append(True)
         self.colors=colors
         self.options=options
-        self.frame= ttk.LabelFrame(root.options_frame, text=title)
+        self.frame= ttk.LabelFrame(frame, text=title)
         self.vars = [tk.BooleanVar(value=val) for val in initial]
         for i, option in enumerate(options):
-            row_index = i // columns + 1  # Start from row 1 and increment every `columns` options
+            row_index = i // columns + 1
             col_index = i % columns
             cb = tk.Checkbutton(self.frame, fg=colors[i], text=option, variable=self.vars[i], onvalue=True, offvalue=False, command=root.draw)
             cb.grid(row=row_index, column=col_index)
-        self.frame.pack()
+        if row is None or column is None:
+            self.frame.pack()
+        else:
+            self.frame.grid(row=row, column=column)
     
 
 class text_input():
-    def __init__(self, root, entry, title):
-        self.label = tk.Label(root.options_frame, text=title)
-        self.label.pack()
-        self.entry = tk.Entry(root.options_frame)
+    def __init__(self,frame, entry, title, row=None,column=None):
+        self.frame= ttk.LabelFrame(frame, text=title)
+        self.entry = tk.Entry(self.frame)
         self.entry.pack()
         self.entry.insert(0,entry)
         self.old=entry
+        if row is None or column is None:
+            self.frame.pack()
+        else:
+            self.frame.grid(row=row, column=column)
 
     def update(self,entry):
         if entry != None:
@@ -81,7 +90,7 @@ class text_input():
 class web_access:
     def __init__(self):
         self.config=filePath()+"webConfig.json"
-        self.appid = ''
+        self.appid=''
         # settings
         self.authTicket=''
         self.sessionId=''
@@ -94,7 +103,6 @@ class web_access:
             [self.sessionId,self.authTicket]=self.read_config(['sessionId','authTicket'])
         except:
             self.get_authTicket()
-
         self.spaceIds = {
             "uplay": "5172a557-50b5-4665-b7db-e3f2e8c5041d",
             "psn": "05bfb3f7-6c21-4c42-be1f-97a33fb5cf66",
@@ -115,7 +123,6 @@ class web_access:
         except:
             file = open(self.config, 'w')
             json.dump(input, file, indent=4)
-            print('test')
             return False
         file.close
         file = open(self.config, 'w')
@@ -187,7 +194,7 @@ class web_access:
         userData=json.loads(response.text)
         return userData['profiles'][0]['nameOnPlatform']
 
-    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode=None,region=None,gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=None,debug=False):
+    def get_data(self,aggregation=['summary','movingpoint','weapons','operators','maps'][0],view=['seasonal','current','rank'][0],UID='',platform='uplay',startDate = (datetime.now() - timedelta(days=120)).strftime("%Y%m%d"),endDate = datetime.now().strftime("%Y%m%d"),seasonCode=None,region='ncsa',gameMode='all,ranked,casual,unranked',teamRole='attacker,defender,all',url=None,debug=False):
         # possible aggregations 
         if seasonCode is list:
             seasonCode = ','.join(seasonCode)
@@ -199,8 +206,8 @@ class web_access:
             region = ','.join(region)
         #selects the correct url to collect the data
         if url == None:
-            if view == 'sandbox':
-                seasonIds=','.join(map(str, list(range(0,-31,-1))))
+            if view == 'rank':
+                seasonIds=','.join(map(str, list(range(0,-27,-1))))
                 url="https://public-ubiservices.ubi.com/v1/spaces/"+self.spaceIds[platform]+"/sandboxes/OSBOR_PC_LNCH_A/r6karma/player_skill_records?board_ids=pvp_ranked&season_ids="+seasonIds+"&region_ids="+region+"&profile_ids="+UID
             else:
                 url="https://prod.datadev.ubisoft.com/v1/users/"+UID+"/playerstats?spaceId="+self.spaceIds[platform]+"&view="+view+"&aggregation="+aggregation+"&gameMode="+gameMode+"&teamRole="+teamRole
@@ -253,7 +260,6 @@ def datamap(data):
     while True:
         data=data[tree[index-1][0]]
         if type(data) is list:
-            print(len(data))
             tree.append([len(data)-1])
         elif type(data) is dict:
             tree.append(list(data))
@@ -303,12 +309,12 @@ def seasonalSummary(data):
         for item in sumVals:
             sumAll[item]=0
         for season in seasons:
-            season['seasonNum'] = int(re.findall(r'\d+',season['seasonYear'])[0])*4+int(re.findall(r'\d+',season['seasonNumber'])[0])-5
+            season['season_id'] = int(re.findall(r'\d+',season['seasonYear'])[0])*4+int(re.findall(r'\d+',season['seasonNumber'])[0])-4
             for calcIn,calcOut in calc:
                 season[calcOut]=eval(calcIn)
             for item in sumVals:
                 sumAll[item]+=season[item]
-        seasons = sorted(seasons, key=lambda x: x['seasonNum'], reverse=False)
+        seasons = sorted(seasons, key=lambda x: x['season_id'], reverse=False)
         sumAll["openingKillDeathRatio"]=sumAll["openingKills"]/sumAll["openingDeaths"]
         sumAll["killDeathRatio"]=sumAll["kills"]/sumAll["death"]
         sumAll["winLossRatio"]=sumAll["matchesWon"]/sumAll["matchesLost"]

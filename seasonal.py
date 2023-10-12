@@ -9,42 +9,16 @@ from scipy.interpolate import make_interp_spline
 import pandas as pd
 from matplotlib.lines import Line2D
 
-class Interface(tk.Tk):
-    def __init__(self):
+class seasonalInterface():
+    def __init__(self,frame):
+        self.frame=frame
         self.web=web_access()
-        super().__init__()
-        self.platform='uplay'
-        self.defaultUID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
-        self.defaultname='botdogs'
-        try:
-            self.defaultUID=self.web.read_config('defaultUID')
-        except:
-            self.web.write_config({'defaultUID':self.defaultUID})
-        self.title("User Statistics Interface")
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.options_frame = ttk.LabelFrame(self, text="Options")
+        self.options_frame = ttk.LabelFrame(self.frame, text="Options")
         self.options_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=0)
-        self.username = text_input(self.options_frame,self.defaultname,'Username:')
-        self.UID = text_input(self.options_frame,self.defaultUID,'UID:')
-        self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
-        self.submit_button.pack()
         stats=['matchesPlayed', 'roundsPlayed', 'minutesPlayed', 'matchesWon', 'matchesLost', 'roundsWon', 'roundsLost', 'kills', 'assists', 'death', 'headshots', 'meleeKills', 'teamKills', 'openingKills', 'openingDeaths', 'trades', 'openingKillTrades', 'openingDeathTrades', 'revives', 'distanceTravelled', 'winLossRatio', 'killDeathRatio', 'headshotAccuracy', 'killsPerRound', 'roundsWithAKill', 'roundsWithMultiKill', 'roundsWithOpeningKill', 'roundsWithOpeningDeath', 'roundsWithKOST', 'roundsSurvived', 'roundsWithAnAce', 'roundsWithClutch', 'timeAlivePerMatch', 'timeDeadPerMatch', 'distancePerRound', 'aces', 'clutches', 'openingKillDeathRatio', 'RoundWinLossRatio']
         self.gameMode = exclusive_input(self,self.options_frame, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
         self.stat = multiple_input(self,self.options_frame, stats,"Statistic:",initial=[False for _ in range(len(stats))],columns=2)
         self.trendLines = multiple_input(self,self.options_frame, ["Points","Line","Linear","Moving Average spline"],"Data Plot:",initial=[True,True,False,False],columns=2)
-        self.get()
-        self.draw()
-
-    def submit(self):
-        if self.username.changed():
-            self.UID.update(self.web.get_UID('uplay',self.username.get()))
-        elif self.UID.changed():
-            self.username.update(self.web.get_name('uplay',self.UID.get()))
-        self.get()
-        self.draw()
-
-    def get(self):
-        self.json=seasonalSummary(self.web.get_data('summary','seasonal',self.UID.get())['profileData'][self.UID.get()]['platforms'][self.web.platformGroup[self.platform]])
         
     def draw(self):
         try:
@@ -96,13 +70,14 @@ class Interface(tk.Tk):
                     values_smooth2 = spl(x_new2)
                     ax.plot(x_new2, values_smooth2, marker='', linestyle='-', color=colors[cindex])
                 custom_lines.append(Line2D([0], [0], color=colors[cindex], lw=4))
-            
             ax.legend(custom_lines, selectedStats)
             ax.set_xlabel('Game #')
             ax.set_ylabel('Value')
-            ax.set_title(self.username.get()+" Seasonal Data Plot")
+            ax.set_title("Seasonal Data Plot")
             ax.margins(x=0,y=0)
             ax.set_ylim(bottom=0)
+            plt.margins(0)
+            fig.subplots_adjust(left=0.12, right=.98, top=.95, bottom=0.1)
         except:
             print(colored('Could Not Load Data or No Data','red'))
             ax.set_title('Could Not Load Data or No Data', color='red')
@@ -110,16 +85,17 @@ class Interface(tk.Tk):
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
             plt.close()
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.canvas = FigureCanvasTkAgg(fig, master=self.frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.frame)
         self.toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-    def on_closing(self):
-        self.quit()
+    def get(self,UID,platform,days=None):
+        self.json=seasonalSummary(self.web.get_data('summary','seasonal',UID)['profileData'][UID]['platforms'][self.web.platformGroup[platform]])
+        self.draw()
 
 if __name__ == "__main__":
-    app = Interface()
+    app=base(seasonalInterface)
     app.mainloop()

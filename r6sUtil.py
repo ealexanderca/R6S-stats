@@ -53,6 +53,30 @@ class multiple_input():
         else:
             self.frame.grid(row=row, column=column)
     
+class drop_down():
+    def __init__(self,frame, options, title, row=None,column=None):
+        self.frame= ttk.LabelFrame(frame, text=title)
+        self.selection=tk.StringVar()
+        self.entry = tk.OptionMenu(self.frame,self.selection,*options)
+        self.selection.set(options[0])
+        self.old=options[0]
+        self.entry.pack()
+        
+        if row is None or column is None:
+            self.frame.pack()
+        else:
+            self.frame.grid(row=row, column=column)
+
+    def changed(self):
+        temp= self.old!=self.get()
+        self.old=self.get()
+        return temp
+
+    def get(self):
+        return str(self.selection.get())
+
+    def val(self):
+        return int(self.selection.get())
 
 class text_input():
     def __init__(self,frame, entry, title, row=None,column=None):
@@ -322,3 +346,38 @@ def seasonalSummary(data):
         sumAll["headshotAccuracy"]=sumAll["headshots"]/sumAll["kills"]
         data[key]={'seasons': seasons,"Summary": sumAll}
     return data
+
+class base(tk.Tk):
+    def __init__(self,plotterClass):
+        super().__init__()
+        self.web=web_access()
+        self.platform='uplay'
+        self.defaultUID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
+        self.defaultname='botdogs'
+        try:
+            self.defaultUID=self.web.read_config('defaultUID')
+        except:
+            self.web.write_config({'defaultUID':self.defaultUID})
+        self.title("User Statistics Interface")
+        self.protocol("WM_DELETE_WINDOW",self.on_closing)
+        self.plotter=plotterClass(self)
+        self.header= tk.Frame(self)
+        self.username = text_input(self.header,self.defaultname,'Username:',row=0, column=0)
+        self.UID = text_input(self.header,self.defaultUID,'UID:',row=0, column=1)
+        self.platform = drop_down(self.header,['uplay','psn','xbl'],'Platform:',row=0, column=2)
+        self.days = text_input(self.header,'120','Days:',row=0, column=3)
+        self.submit_button = tk.Button(self.header, text="Submit", command=self.submit)
+        self.submit_button.grid(row=0, column=4)
+        self.header.pack()
+        self.plotter.get(self.UID.get(),self.platform.get(),days=self.days.val())
+
+
+    def submit(self):
+        if self.username.changed():
+            self.UID.update(self.web.get_UID('uplay',self.username.get()))
+        elif self.UID.changed():
+            self.username.update(self.web.get_name('uplay',self.UID.get()))
+        self.plotter.get(self.UID.get(),self.platform.get(),days=self.days.val())
+    
+    def on_closing(self):
+        self.quit()

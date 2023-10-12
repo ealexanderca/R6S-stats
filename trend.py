@@ -9,53 +9,16 @@ from scipy.interpolate import make_interp_spline
 import pandas as pd
 from datetime import datetime, timedelta
 
-class Interface(tk.Tk):
-    def __init__(self):
+class trendInterface():
+    def __init__(self,frame):
+        self.frame=frame
         self.web=web_access()
-        super().__init__()
-        self.defaultUID='833708a6-9155-435c-bfdc-6d9a96d6fcd0'
-        self.defaultname='botdogs'
-        try:
-            self.defaultUID=self.web.read_config('defaultUID')
-        except:
-            self.web.write_config({'defaultUID':self.defaultUID})
-        self.title("User Statistics Interface")
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.options_frame = ttk.LabelFrame(self, text="Options")
+        self.options_frame = ttk.LabelFrame(self.frame, text="Options")
         self.options_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=0)
-        self.username = text_input(self.options_frame,self.defaultname,'Username:')
-        self.UID = text_input(self.options_frame,self.defaultUID,'UID:')
-        self.days = text_input(self.options_frame,'120','Days:')
-        self.submit_button = tk.Button(self.options_frame, text="Submit", command=self.submit)
-        self.submit_button.pack()
         self.gameMode = exclusive_input(self,self.options_frame, ["all", "casual", "ranked", "unranked"],"Game Mode:",columns=2)
         self.teamRole = multiple_input(self,self.options_frame, ["all", "attacker", "defender"],"Team Role:",colors=['black','red','blue'])
         self.stat = exclusive_input(self,self.options_frame, ["winLossRatio", "killDeathRatio", "headshotAccuracy", "killsPerRound", "roundsWithAKill", "roundsWithMultiKill","roundsWithOpeningKill", "roundsWithOpeningDeath", "roundsWithKOST","roundsSurvived", "ratioTimeAlivePerMatch", "distancePerRound"],"Statistic:")
         self.trendLines = multiple_input(self,self.options_frame, ["points","Spline","Linear","moving average spline"],"Data Plot:",initial=[True,True,False,False])
-        self.get()
-        self.draw()
-
-    def submit(self):
-        if self.username.changed():
-            self.UID.update(self.web.get_UID('uplay',self.username.get()))
-        elif self.UID.changed():
-            self.username.update(self.web.get_name('uplay',self.UID.get()))
-        if self.days.changed():
-            if self.days.get()=='':
-                self.days.update("120")
-            if self.days.val()>120:
-                self.days.update("120")
-            elif self.days.val()<1:
-                self.days.update('1')
-        self.get()
-        self.draw()
-
-    def get(self):
-        endDate = datetime.now()
-        startDate = endDate - timedelta(days=self.days.val())
-        endDate = endDate.strftime("%Y%m%d")
-        startDate = startDate.strftime("%Y%m%d")
-        self.json=self.web.get_data('movingpoint','current',self.UID.get(),startDate=startDate,endDate=endDate)
         
     def draw(self):
         try:
@@ -70,8 +33,8 @@ class Interface(tk.Tk):
                     selectedTeamRoles.append(self.teamRole.options[index])
             for selectedTeamRole in selectedTeamRoles:
                 index=self.teamRole.options.index(selectedTeamRole)
-                data=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
-                trend=self.json['profileData'][self.UID.get()]['platforms']['PC']['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
+                data=self.json['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['actuals']
+                trend=self.json['gameModes'][selectedGameMode]['teamRoles'][selectedTeamRole][0][selectedStat]['trend']
                 # converting data to number lists
                 datakeys = [eval(i) for i in list(data.keys())]
                 datavalues = list(data.values())
@@ -83,9 +46,9 @@ class Interface(tk.Tk):
                 # plotting the trend lines
                 if self.trendLines.vars[1].get():
                     #r6s trend line
-                    x_new = np.linspace(min(map(int,trendkeys)), max(map(int,trendkeys)), 800)
+                    x_new = np.linspace(min(map(int,datakeys)), max(map(int,datakeys)), 800)
                     try:
-                        spline = make_interp_spline(trendkeys, trendvalues, k=3)
+                        spline = make_interp_spline(np.array(trendkeys)/max(trendkeys)*max(datakeys), trendvalues, k=3)
                         values_smooth = spline(x_new)
                     except:
                         values_smooth=trendvalues
@@ -108,6 +71,8 @@ class Interface(tk.Tk):
             ax.set_ylabel('Value')
             ax.set_title(selectedStat+' Data Plot')
             ax.margins(x=0,y=0)
+            fig.subplots_adjust(left=0.08, right=.98, top=.95, bottom=0.1)
+            plt.margins(0)
         except:
             print(colored('Could Not Load Data or No Data','red'))
             ax.set_title('Could Not Load Data or No Data', color='red')
@@ -115,16 +80,21 @@ class Interface(tk.Tk):
             self.canvas.get_tk_widget().destroy()
             self.toolbar.destroy()
             plt.close()
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.canvas = FigureCanvasTkAgg(fig, master=self.frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.toolbar = NavigationToolbar2Tk(self.canvas, self)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.frame)
         self.toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-    def on_closing(self):
-        self.quit()
+    def get(self,UID,platform,days):
+        endDate = datetime.now()
+        startDate = endDate - timedelta(days=days)
+        endDate = endDate.strftime("%Y%m%d")
+        startDate = startDate.strftime("%Y%m%d")
+        self.json=self.web.get_data('movingpoint','current',UID,platform,startDate=startDate,endDate=endDate)['profileData'][UID]['platforms'][self.web.platformGroup[platform]]
+        self.draw()
 
 if __name__ == "__main__":
-    app = Interface()
+    app=base(trendInterface)
     app.mainloop()
